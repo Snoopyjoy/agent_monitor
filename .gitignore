@@ -1,0 +1,7 @@
+node_modules/
+data/
+dist/
+.agents/
+skills-lock.json
+.DS_Store
+*.log

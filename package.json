@@ -1,0 +1,21 @@
+{
+  "name": "agent-monitor",
+  "version": "0.1.0",
+  "private": false,
+  "license": "MIT",
+  "description": "Local Codex / Cursor quota and reminder dashboard, with optional Kindle USB e-ink screen",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch server/index.js",
+    "local": "HOST=127.0.0.1 node --disable-warning=ExperimentalWarning server/index.js",
+    "url": "node scripts/print-urls.js",
+    "daemon:install": "bash scripts/install-launchagent.sh",
+    "daemon:uninstall": "bash scripts/uninstall-launchagent.sh",
+    "daemon:status": "launchctl print gui/$(id -u)/com.agent.monitor",
+    "kindle:pack": "bash scripts/pack-kindle.sh"
+  }
+}

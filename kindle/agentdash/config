@@ -1,0 +1,7 @@
+# Dashboard image served by agent_monitor on the Mac. The Kindle hands the Mac this address
+# over the USB cable (DHCP), so nothing needs to be configured on the Mac.
+URL="http://192.168.15.201:7788/screen.png"
+# Seconds between checks for a new image.
+INTERVAL=30
+# Every Nth redraw flashes the screen to clear e-ink ghosting.
+FLASH_EVERY=10

@@ -22,6 +22,7 @@ MAC_IP=${HOST%%:*}
 MAIN=$$
 REASON=
 WATCHER=
+KEEPER=
 DHCPD=
 FETCH=
 
@@ -131,11 +132,15 @@ waiting_screen() {
 		say 1 "USBNet is off. Tap the USBNet toggle,"
 		say 2 "then start the dashboard again."
 	fi
-	say 7 "Press the power button to exit"
+	say 7 "Short press power to exit"
+	say 8 "Hold ~40s if that fails"
 }
 
 hide_ui() {
-	lipc-set-prop com.lab126.powerd preventScreenSaver 1
+	# preventScreenSaver=1 blocks goingToScreenSaver, so the power button would do nothing.
+	# Leave it off and stretch the idle timeout instead; dismiss the saver on exit.
+	lipc-set-prop com.lab126.powerd preventScreenSaver 0
+	lipc-set-prop com.lab126.powerd touchScreenSaverTimeout 86400 2>/dev/null
 	[ -f /etc/upstart/statusbar.conf ] && stop statusbar >/dev/null 2>&1
 	lipc-set-prop com.lab126.pillow disableEnablePillow disable
 	# The window manager drives the framework's own refreshes, such as the status bar clock.
@@ -157,13 +162,27 @@ restore_ui() {
 watch_power() {
 	lipc-wait-event -s 0 com.lab126.powerd goingToScreenSaver >/dev/null 2>&1 &
 	echo $! >"$LIPCPID"
-	wait $! && kill -USR1 "$MAIN"
+	if wait $!; then
+		# Cancel the screensaver so the user does not have to press power a second time.
+		lipc-set-prop com.lab126.powerd powerButton 1 2>/dev/null
+		kill -USR1 "$MAIN"
+	fi
+}
+
+# Idle timeout can still fire after many minutes; poke powerd so the frame stays up.
+keep_awake() {
+	while :; do
+		sleep 60 &
+		wait $!
+		lipc-set-prop com.lab126.powerd wakeUp 1 2>/dev/null
+	done
 }
 
 cleanup() {
 	trap - EXIT
 	[ -f "$LIPCPID" ] && kill "$(cat "$LIPCPID")" 2>/dev/null
 	[ -n "$WATCHER" ] && kill "$WATCHER" 2>/dev/null
+	[ -n "$KEEPER" ] && kill "$KEEPER" 2>/dev/null
 	[ -n "$DHCPD" ] && kill "$DHCPD" 2>/dev/null
 	[ -n "$FETCH" ] && kill "$FETCH" 2>/dev/null
 	restore_ui
@@ -182,6 +201,8 @@ ensure_usbnet
 hide_ui
 watch_power &
 WATCHER=$!
+keep_awake &
+KEEPER=$!
 start_dhcp
 
 count=0

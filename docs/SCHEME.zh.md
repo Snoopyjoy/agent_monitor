@@ -190,8 +190,9 @@ grep USE_WIFI config   # 应为 USE_WIFI="false"
 | 取图 | `curl`/`wget` 拉 `URL`；校验 PNG 头；后台下载以便电源键不被超时卡住 |
 | 刷新 | 内容变化才重绘；每 `FLASH_EVERY` 次全刷去残影 |
 | 未连通 | 等待页（ASCII，因 FBInk 内置字库无 CJK） |
-| 退出 | 电源键（`goingToScreenSaver`）；曾连通后连续检测到拔线 |
+| 退出 | 短按电源（监听 `goingToScreenSaver`；**不能**开 `preventScreenSaver=1`，否则电源无事件）；退出时 `powerButton 1` 立刻关掉屏保。曾连通后连续检测到拔线也会退出 |
 | 恢复 UI | `CONT awesome`、开 pillow、状态栏；非电源退出时回主页并 `xrefresh` |
+| 卡死救援 | 长按电源约 40 秒强制重启；脚本改动均为临时，重启后界面复原 |
 
 可改 `kindle/agentdash/config`：`URL`、`INTERVAL`、`FLASH_EVERY`。
 

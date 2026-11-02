@@ -237,6 +237,8 @@ grep USE_WIFI config   # 应为 USE_WIFI="false"
 | `KINDLE_USB_IP` | USB 免密钥对端 | `192.168.15.244` |
 | `CHROME_PATH` | 截图浏览器 | 自动探测 |
 | `CODEX_HOME` / `CURSOR_HOME` / `CURSOR_USER_DIR` | 数据根目录 | 各平台默认 |
+
+Cursor 较新版本会把 `state.vscdb` 里的 `accessToken` 写成 `cursor-safe-storage:v1:` 密文。监控在 Mac 上优先读钥匙串里的 `cursor-access-token`，必要时再解密 Safe Storage；**只影响 Mac 端服务，Kindle 端脚本不用更新。**
 | `LOCAL_POLL_MS` / `REMOTE_POLL_MS` | 轮询间隔 | 3000 / 60000 |
 
 ## 8. 开源与合规说明

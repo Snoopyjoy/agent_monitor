@@ -3,8 +3,9 @@ import { readdir, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { tailLines } from '../lines.js';
-import { clip, clipBlock, DAY, dayKey, decodeJwt, errorText, HOUR, lastDays, parseJson, projectName, toText } from '../util.js';
+import { clip, clipBlock, DAY, dayKey, errorText, HOUR, lastDays, parseJson, projectName, toText } from '../util.js';
 import { cursorClient } from './api.js';
+import { cursorAuthError, resolveCursorAuth } from './auth.js';
 
 const AUTH_KEYS = [
   'cursorAuth/accessToken',
@@ -12,6 +13,7 @@ const AUTH_KEYS = [
   'cursorAuth/stripeMembershipType',
   'cursorAuth/cachedTeam',
   'cursorAuth/cachedScopedProfile',
+  'cursorAuth/stripeMembershipAuthId',
 ];
 
 function userQuery(text) {
@@ -139,13 +141,13 @@ export class CursorSource {
     let auth;
     try {
       this.#open();
-      auth = this.#readAuth();
+      auth = await this.#readAuth();
     } catch (err) {
       this.summaryError = errorText(err);
       return;
     }
     if (!auth.token || !auth.userId) {
-      this.summaryError = 'Cursor 未登录';
+      this.summaryError = cursorAuthError(auth);
       return;
     }
     this.account = auth.account;
@@ -270,21 +272,9 @@ export class CursorSource {
   }
 
   /** The IDE keeps this token fresh; it is only ever sent to cursor.com, never to the browser. */
-  #readAuth() {
+  async #readAuth() {
     const kv = Object.fromEntries(this.stmts.auth.all(...AUTH_KEYS).map(r => [r.key, toText(r.value)]));
-    const token = kv['cursorAuth/accessToken'] || null;
-    const sub = token ? decodeJwt(token)?.sub : null;
-    const team = parseJson(kv['cursorAuth/cachedTeam']);
-    return {
-      token,
-      userId: sub ? String(sub).split('|').pop() : null,
-      account: {
-        email: kv['cursorAuth/cachedEmail'] || null,
-        membership: kv['cursorAuth/stripeMembershipType'] || null,
-        team: team?.name ?? null,
-        teamId: team?.teamId ?? null,
-      },
-    };
+    return resolveCursorAuth(kv);
   }
 
   async #refreshEvents(api, now) {

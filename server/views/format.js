@@ -2,7 +2,7 @@ import { dayKey, pad } from '../util.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
-export const TOOL = { codex: 'Codex', cursor: 'Cursor' };
+export const TOOL = { codex: 'Codex', cursor: 'Cursor', claude: 'Claude' };
 export const PLAN = { prolite: 'Pro Lite', pro: 'Pro', plus: 'Plus', team: 'Team', business: 'Business', enterprise: 'Enterprise', edu: 'Edu', free: 'Free' };
 export const REMINDER = { done: '完成', aborted: '中断', waiting: '待确认', stalled: '无响应', quota: '额度', reset: '重置' };
 

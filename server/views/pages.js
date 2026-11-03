@@ -20,6 +20,7 @@ const ABORT = { interrupted: '手动中断', replaced: '被新请求替换' };
 const MODE = { agent: 'Agent', chat: 'Ask', plan: 'Plan', debug: 'Debug', background: 'Background' };
 
 const tag = (text, cls = '') => `<span class="tag${cls ? ` ${cls}` : ''}">${esc(text)}</span>`;
+const big = text => `<div class="big${String(text).length > 7 ? ' long' : ''}">${text}</div>`;
 const statusTag = s => tag(...(STATUS[s] ?? [s, '']));
 const taskHref = (tool, id) => `/task/${tool}/${encodeURIComponent(id)}`;
 const clampPct = v => Math.max(0, Math.min(100, Number(v) || 0)).toFixed(1);
@@ -62,11 +63,12 @@ function codexQuota(c, now) {
   const plan = q.planType ? PLAN[q.planType] ?? capitalize(q.planType) : '';
   const head = `<div class="qh">CODEX${plan ? ` <span class="sub">${esc(plan)}</span>` : ''}</div>`;
   if (!c.available) return `${head}<div class="qs">未检测到 Codex（~/.codex）</div>`;
-  if (!m) return `${head}<div class="big">--</div>${lines([esc(q.error ?? '暂无额度数据')], 'qs')}`;
+  if (!m) return `${head}${big('--')}${lines([esc(q.error ?? '暂无额度数据')], 'qs')}`;
   const w = m.main;
   const info = [
     q.limitReached && '<b>已触发限额</b>',
-    join([`已用 ${pctAuto(w.used)}`, w.resetAt && `${when(w.resetAt, now)} 重置（${coarse(w.resetAt - now)}后）`]),
+    `已用 ${pctAuto(w.used)}`,
+    w.resetAt && `${when(w.resetAt, now)} 重置 · ${coarse(w.resetAt - now)}后`,
     ...m.windows.filter(o => o !== w).map(o => join([`${esc(o.label)}额度剩余 ${pctAuto(o.remaining)}`, o.resetAt && `${coarse(o.resetAt - now)}后重置`])),
     projectionText(w.projection, now, v => `重置前约用到 ${pct(Math.min(100, v))}`),
   ];
@@ -77,7 +79,34 @@ function codexQuota(c, now) {
   }
   if (q.source === 'log') info.push(`<span class="dim">实时接口暂不可用，显示 ${when(q.at, now)} 的日志数据</span>`);
   if (q.error) info.push(`<span class="dim">${esc(q.error)}</span>`);
-  return `${head}<div class="ql">${esc(w.label)}额度剩余</div><div class="big">${pctAuto(w.remaining)}</div>${bar(w.remaining)}${lines(info, 'qs')}`;
+  return `${head}<div class="ql">${esc(w.label)}额度剩余</div>${big(pctAuto(w.remaining))}${bar(w.remaining)}${lines(info, 'qs')}`;
+}
+
+function extraLine(extra) {
+  if (!extra) return '';
+  if (extra.utilization != null) return `额外用量已用 ${pctAuto(Number(extra.utilization))}`;
+  if (extra.used_credits != null && extra.monthly_limit != null) return `额外用量 ${num(extra.used_credits)} / ${num(extra.monthly_limit)}`;
+  return '已开启额外用量';
+}
+
+function claudeQuota(c, now) {
+  const q = c.quota;
+  const m = c.metric;
+  const plan = q.planType ? PLAN[q.planType] ?? capitalize(q.planType) : '';
+  const head = `<div class="qh">CLAUDE${plan ? ` <span class="sub">${esc(plan)}</span>` : ''}</div>`;
+  if (!c.available) return `${head}<div class="qs">未检测到 Claude Code（~/.claude）</div>`;
+  if (!m) return `${head}${big('--')}${lines([esc(q.error ?? '暂无额度数据')], 'qs')}`;
+  const w = m.main;
+  const info = [
+    q.limitReached && '<b>已触发限额</b>',
+    `已用 ${pctAuto(w.used)}`,
+    w.resetAt && `${when(w.resetAt, now)} 重置 · ${coarse(w.resetAt - now)}后`,
+    ...m.windows.filter(o => o !== w).map(o => join([`${esc(o.label)}剩余 ${pctAuto(o.remaining)}`, o.resetAt && `${coarse(o.resetAt - now)}后重置`])),
+    projectionText(w.projection, now, v => `重置前约用到 ${pct(Math.min(100, v))}`),
+    extraLine(q.extra),
+  ];
+  if (q.error) info.push(`<span class="dim">${esc(q.error)}</span>`);
+  return `${head}<div class="ql">${esc(w.label)}额度剩余</div>${big(pctAuto(w.remaining))}${bar(w.remaining)}${lines(info, 'qs')}`;
 }
 
 function cursorQuota(c, now) {
@@ -86,16 +115,16 @@ function cursorQuota(c, now) {
   const sub = join([q.membership && esc(capitalize(q.membership)), q.team && esc(q.team)]);
   const head = `<div class="qh">CURSOR${sub ? ` <span class="sub">${sub}</span>` : ''}</div>`;
   if (!c.available) return `${head}<div class="qs">未检测到 Cursor</div>`;
-  if (q.unlimited) return `${head}<div class="ql">额度</div><div class="big">不限量</div>`;
-  if (!m) return `${head}<div class="big">--</div>${lines([esc(q.error ?? '暂无额度数据')], 'qs')}`;
+  if (q.unlimited) return `${head}<div class="ql">额度</div>${big('不限量')}`;
+  if (!m) return `${head}${big('--')}${lines([esc(q.error ?? '暂无额度数据')], 'qs')}`;
   const p = m.main;
   const info = [];
   let top;
   if (p.limit) {
-    top = `<div class="ql">${esc(p.label)}剩余</div><div class="big">${usd(p.remaining)}</div>${bar(100 - m.usedPercent)}`;
+    top = `<div class="ql">${esc(p.label)}剩余</div>${big(usd(p.remaining))}${bar(100 - m.usedPercent)}`;
     info.push(`已用 ${usd(p.used)} / ${usd(p.limit)}（${pctAuto(m.usedPercent)}）`);
   } else {
-    top = `<div class="ql">${esc(p.label)}已用</div><div class="big">${usd(p.used)}</div>`;
+    top = `<div class="ql">${esc(p.label)}已用</div>${big(usd(p.used))}`;
   }
   if (q.cycleEnd) info.push(`${monthDay(q.cycleEnd)} 重置（${coarse(q.cycleEnd - now)}后）`);
   if (p.limit) info.push(projectionText(m.projection, now, v => `周期末约用 ${usd((p.limit * v) / 100)}（${pct(v)}）`));
@@ -109,7 +138,7 @@ function cursorQuota(c, now) {
 }
 
 function quotaSection(snap) {
-  return `<table class="quota"><tr><td class="q">${codexQuota(snap.codex, snap.now)}</td><td class="q">${cursorQuota(snap.cursor, snap.now)}</td></tr></table>`;
+  return `<table class="quota"><tr><td class="q">${codexQuota(snap.codex, snap.now)}</td><td class="q">${cursorQuota(snap.cursor, snap.now)}</td><td class="q">${claudeQuota(snap.claude, snap.now)}</td></tr></table>`;
 }
 
 function reminderRow(r, now) {
@@ -169,26 +198,32 @@ function recentSection(snap, limit = 12) {
 }
 
 function usageSection(snap) {
-  const { codex, cursor, now } = snap;
+  const { codex, cursor, claude, now } = snap;
   const st = codex.stats;
   const sp = cursor.spend;
+  const ct = claude.stats;
   const showCodex = codex.available;
   const showCursor = cursor.available;
-  if (!showCodex && !showCursor) return '';
+  const showClaude = claude.available;
+  if (!showCodex && !showCursor && !showClaude) return '';
   const cents = Object.fromEntries(sp.daily.map(d => [d.date, d.cents]));
+  const claudeTokens = Object.fromEntries(ct.daily.map(d => [d.date, d.total]));
   const cycleStart = cursor.quota.cycleStart;
   const beforeCycle = date => cycleStart && new Date(`${date}T23:59:59`).getTime() < cycleStart;
-  const head = `<tr><th></th>${showCodex ? '<th class="num">Codex tokens</th>' : ''}${showCursor ? '<th class="num">Cursor 花费</th>' : ''}</tr>`;
-  const row = (label, codexValue, cursorValue, cls = '') => `<tr${cls ? ` class="${cls}"` : ''}><td>${label}</td>`
-    + `${showCodex ? `<td class="num">${codexValue}</td>` : ''}${showCursor ? `<td class="num">${cursorValue}</td>` : ''}</tr>`;
-  const days = st.daily.slice().reverse().map(d => row(
+  const axis = (st.daily.length ? st.daily : ct.daily).slice().reverse();
+  const head = `<tr><th></th>${showCodex ? '<th class="num">Codex</th>' : ''}${showCursor ? '<th class="num">Cursor</th>' : ''}${showClaude ? '<th class="num">Claude</th>' : ''}</tr>`;
+  const cell = (on, value) => (on ? `<td class="num">${value}</td>` : '');
+  const row = (label, codexValue, cursorValue, claudeValue, cls = '') => `<tr${cls ? ` class="${cls}"` : ''}><td>${label}</td>`
+    + `${cell(showCodex, codexValue)}${cell(showCursor, cursorValue)}${cell(showClaude, claudeValue)}</tr>`;
+  const days = axis.map(d => row(
     dayLabel(d.date, now),
     st.ready ? tokens(d.total) : '…',
     beforeCycle(d.date) ? '-' : sp.ready ? usd(cents[d.date] ?? 0) : '…',
+    ct.ready ? tokens(claudeTokens[d.date] ?? 0) : '…',
   ));
   const weekCents = sp.daily.reduce((s, d) => s + d.cents, 0);
-  const total = row('7 天', st.ready ? tokens(st.week.total) : '…', sp.ready ? usd(weekCents) : '…', 'total');
-  const cycle = showCursor && sp.ready ? row('本周期', '', usd(sp.totalCents), 'total') : '';
+  const total = row('7 天', st.ready ? tokens(st.week.total) : '…', sp.ready ? usd(weekCents) : '…', ct.ready ? tokens(ct.week.total) : '…', 'total');
+  const cycle = showCursor && sp.ready ? row('本周期', '', usd(sp.totalCents), '', 'total') : '';
   const notes = [];
   if (showCodex && !st.ready) notes.push(`Codex 用量统计中 ${pct(st.progress * 100)}…`);
   if (showCodex && st.ready && st.week.total) {
@@ -198,6 +233,11 @@ function usageSection(snap) {
     notes.push(`Cursor 本周期模型：${sp.models.slice(0, 3).map(x => `${esc(x.model)} ${usd(x.cents)}`).join('，')}`);
   }
   if (showCursor && sp.error) notes.push(`Cursor 明细获取失败：${esc(sp.error)}`);
+  if (showClaude && ct.ready && ct.week.total) {
+    notes.push(`Claude 模型：${ct.models.slice(0, 3).map(x => `${esc(x.model)} ${pct((x.total / ct.week.total) * 100)}`).join('，')}`);
+  }
+  if (showClaude && ct.stale) notes.push(`Claude 用量统计截至 ${dayLabel(ct.asOf, now)}`);
+  if (showClaude && ct.error) notes.push(`Claude 用量读取失败：${esc(ct.error)}`);
   return `<h2>用量</h2><table class="usage">${head}${days.join('')}${total}${cycle}</table>${lines(notes, 'meta')}`;
 }
 

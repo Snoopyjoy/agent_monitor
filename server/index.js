@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { Auth, fromUsbPeer, parseCookies } from './auth.js';
+import { ClaudeSource } from './claude/index.js';
 import { CodexSource } from './codex/index.js';
 import { config } from './config.js';
 import { CursorSource } from './cursor/index.js';
@@ -19,16 +20,17 @@ const HTML = 'text/html; charset=utf-8';
 const JSON_TYPE = 'application/json; charset=utf-8';
 const TEXT = 'text/plain; charset=utf-8';
 const ASSET_TYPES = { 'style.css': 'text/css; charset=utf-8', 'app.js': 'application/javascript; charset=utf-8' };
-const TOOL = { codex: 'Codex', cursor: 'Cursor' };
+const TOOL = { codex: 'Codex', cursor: 'Cursor', claude: 'Claude' };
 
 const codex = new CodexSource(config);
 const cursor = new CursorSource(config);
+const claude = new ClaudeSource(config);
 const reminders = new Reminders(config);
 const screen = new ScreenRenderer(config);
 const auth = await Auth.create(config);
-await Promise.all([codex.stats.init(), reminders.init()]);
+await Promise.all([codex.stats.init(), claude.stats.refresh(), reminders.init()]);
 const assets = await loadAssets();
-let snapshot = buildSnapshot({ codex, cursor });
+let snapshot = buildSnapshot({ codex, cursor, claude });
 
 async function loadAssets() {
   const files = {};
@@ -42,9 +44,10 @@ async function loadAssets() {
 }
 
 function refreshSnapshot() {
-  snapshot = buildSnapshot({ codex, cursor });
+  snapshot = buildSnapshot({ codex, cursor, claude });
   reminders.observeQuota('codex', snapshot.codex.metric);
   reminders.observeQuota('cursor', snapshot.cursor.metric);
+  reminders.observeQuota('claude', snapshot.claude.metric);
   reminders.flush().catch(err => console.error(`[reminders] ${errorText(err)}`));
 }
 
@@ -288,10 +291,10 @@ every('local', config.localPollMs, async () => {
   refreshSnapshot();
 });
 every('remote', config.remotePollMs, async () => {
-  await Promise.all([codex.refreshRemote(), cursor.refreshRemote()]);
+  await Promise.all([codex.refreshRemote(), cursor.refreshRemote(), claude.refreshRemote()]);
   refreshSnapshot();
 });
-every('stats', 60_000, () => codex.stats.refresh());
+every('stats', 60_000, () => Promise.all([codex.stats.refresh(), claude.stats.refresh()]));
 
 // An explicit PORT (as set by the LaunchAgent) must not drift, or the Kindle bookmark breaks.
 let port;

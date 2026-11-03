@@ -4,7 +4,7 @@ import { MINUTE, parseJson } from './util.js';
 import { duration, pct } from './views/format.js';
 
 const ACTIVE = new Set(['running', 'waiting', 'stalled']);
-const TOOL = { codex: 'Codex', cursor: 'Cursor' };
+const TOOL = { codex: 'Codex', cursor: 'Cursor', claude: 'Claude' };
 const MAX_ITEMS = 200;
 
 function doneText(t) {

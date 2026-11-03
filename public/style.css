@@ -6,7 +6,7 @@ body {
   color: #000;
   font: 17px/1.45 "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
-#wrap { max-width: 860px; margin: 0 auto; padding: 8px 14px 24px; }
+#wrap { max-width: 980px; margin: 0 auto; padding: 8px 14px 24px; }
 a { color: #000; }
 table { border-collapse: collapse; width: 100%; }
 td, th { padding: 0; text-align: left; vertical-align: top; }
@@ -36,12 +36,13 @@ h2 { font-size: 18px; margin: 18px 0 8px; padding-bottom: 3px; border-bottom: 2p
 .dim { color: #444; }
 
 .quota { margin: 4px 0 2px; }
-.q { width: 50%; padding: 4px 14px 8px 0; }
-.q + .q { padding: 4px 0 8px 14px; border-left: 2px solid #000; }
+.q { width: 33.33%; padding: 4px 12px 8px 0; overflow: hidden; }
+.q + .q { padding: 4px 0 8px 12px; border-left: 2px solid #000; }
 .qh { font-size: 14px; font-weight: bold; letter-spacing: 1px; }
 .sub { font-weight: normal; letter-spacing: 0; }
 .ql { font-size: 15px; margin-top: 6px; }
-.big { font-size: 46px; font-weight: bold; line-height: 1.1; margin: 2px 0 6px; white-space: nowrap; }
+.big { font-size: 36px; font-weight: bold; line-height: 1.1; margin: 2px 0 6px; white-space: nowrap; }
+.big.long { font-size: 26px; letter-spacing: -0.5px; }
 .bar { height: 12px; border: 2px solid #000; margin-bottom: 6px; }
 .bar div { height: 12px; background: #000; }
 .qs { font-size: 14px; margin-top: 3px; }

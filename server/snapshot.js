@@ -21,7 +21,7 @@ function project(usedPercent, start, end, now) {
   return { atEnd, exhaustAt: exhaustAt && exhaustAt < end ? exhaustAt : null };
 }
 
-function codexMetric(q, now) {
+function windowMetric(q, now) {
   if (!q?.windows?.length) return null;
   const windows = q.windows.map(w => {
     const expired = Boolean(w.resetAt && w.resetAt <= now);
@@ -60,21 +60,29 @@ function cursorMetric(q, now) {
   };
 }
 
-export function buildSnapshot({ codex, cursor }, now = Date.now()) {
+export function buildSnapshot({ codex, cursor, claude }, now = Date.now()) {
   const spend = cursor.spend(now);
   const { byConversation, ...spendSummary } = spend;
   const cursorTasks = cursor.tasks.map(t => ({ ...t, costCents: byConversation.get(t.id) ?? null }));
   const tasks = [...codex.tasks, ...cursorTasks];
   const codexQuota = codex.quota(now);
   const cursorQuota = cursor.quota(now);
+  const claudeQuota = claude.quota();
   return {
     now,
     codex: {
       available: codex.available,
       error: codex.localError,
       quota: codexQuota,
-      metric: codexMetric(codexQuota, now),
+      metric: windowMetric(codexQuota, now),
       stats: codex.stats.summary(now),
+    },
+    claude: {
+      available: claude.available,
+      error: claude.liveError,
+      quota: claudeQuota,
+      metric: windowMetric(claudeQuota, now),
+      stats: claude.stats.summary(now),
     },
     cursor: {
       available: cursor.available,

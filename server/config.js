@@ -24,6 +24,7 @@ export const config = {
   port: num(process.env.PORT, 7788),
   key: process.env.MONITOR_KEY || '',
   codexHome: process.env.CODEX_HOME || join(HOME, '.codex'),
+  claudeHome: process.env.CLAUDE_HOME || join(HOME, '.claude'),
   cursorHome: process.env.CURSOR_HOME || join(HOME, '.cursor'),
   cursorUserDir: process.env.CURSOR_USER_DIR || defaultCursorUserDir(),
   localPollMs: num(process.env.LOCAL_POLL_MS, 3000),
